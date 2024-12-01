@@ -6,3 +6,191 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
+
+model audit_logs {
+  id         BigInt    @id @default(autoincrement())
+  user_id    BigInt?
+  action     String    @db.VarChar(255)
+  details    String?   @db.Text
+  created_at DateTime? @default(now()) @db.DateTime(0)
+  users      users?    @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "audit_logs_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+}
+
+model investor_packages {
+  id                  BigInt                @id @default(autoincrement())
+  name                String                @db.VarChar(50)
+  min_amount          Decimal               @db.Decimal(18, 2)
+  max_amount          Decimal               @db.Decimal(18, 2)
+  daily_roi           Decimal               @db.Decimal(5, 4)
+  period_days         Int
+  waiting_period_days Int?                  @default(4)
+  created_at          DateTime?             @default(now()) @db.DateTime(0)
+  updated_at          DateTime?             @default(now()) @db.DateTime(0)
+  investor_portfolios investor_portfolios[]
+}
+
+model investor_portfolios {
+  id                BigInt            @id @default(autoincrement())
+  user_id           BigInt
+  package_id        BigInt
+  investment_amount Decimal           @db.Decimal(18, 2)
+  daily_roi_amount  Decimal?          @db.Decimal(18, 2)
+  total_roi         Decimal?          @db.Decimal(18, 2)
+  start_date        DateTime          @db.DateTime(0)
+  end_date          DateTime?         @db.DateTime(0)
+  created_at        DateTime?         @default(now()) @db.DateTime(0)
+  updated_at        DateTime?         @default(now()) @db.DateTime(0)
+  users             users             @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "investor_portfolios_ibfk_1")
+  investor_packages investor_packages @relation(fields: [package_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "investor_portfolios_ibfk_2")
+
+  @@index([package_id], map: "package_id")
+  @@index([user_id], map: "user_id")
+}
+
+model kyc_details {
+  id               BigInt                    @id @default(autoincrement())
+  user_id          BigInt
+  full_name        String                    @db.VarChar(255)
+  country          String?                   @db.VarChar(255)
+  document_type    kyc_details_document_type
+  document_file    String                    @db.VarChar(255)
+  selfie_file      String                    @db.VarChar(255)
+  kyc_status       kyc_details_kyc_status?   @default(Pending)
+  rejection_reason String?                   @db.VarChar(255)
+  created_at       DateTime?                 @default(now()) @db.DateTime(0)
+  updated_at       DateTime?                 @default(now()) @db.DateTime(0)
+  users            users                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "kyc_details_ibfk_1")
+  kyc_documents    kyc_documents[]
+
+  @@index([user_id], map: "user_id")
+}
+
+model kyc_documents {
+  id            BigInt                       @id @default(autoincrement())
+  kyc_id        BigInt
+  document_file String                       @db.VarChar(255)
+  document_type kyc_documents_document_type?
+  created_at    DateTime?                    @default(now()) @db.DateTime(0)
+  kyc_details   kyc_details                  @relation(fields: [kyc_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "kyc_documents_ibfk_1")
+
+  @@index([kyc_id], map: "kyc_id")
+}
+
+model payments {
+  id             BigInt                  @id @default(autoincrement())
+  user_id        BigInt
+  portfolio_id   BigInt
+  token_price    Decimal                 @db.Decimal(18, 6)
+  payment_amount Decimal                 @db.Decimal(18, 2)
+  payment_fee    Decimal                 @db.Decimal(18, 2)
+  status         payments_status?        @default(Pending)
+  payment_method payments_payment_method
+  payment_date   DateTime?               @default(now()) @db.DateTime(0)
+  created_at     DateTime?               @default(now()) @db.DateTime(0)
+  updated_at     DateTime?               @default(now()) @db.DateTime(0)
+  users          users                   @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "payments_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+}
+
+model roles {
+  role_id     BigInt       @id @default(autoincrement())
+  name        String       @unique(map: "name") @db.VarChar(50)
+  description String?      @db.VarChar(255)
+  user_roles  user_roles[]
+}
+
+model sessions {
+  id          BigInt    @id @default(autoincrement())
+  user_id     BigInt
+  session_key String    @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.DateTime(0)
+  expires_at  DateTime  @db.DateTime(0)
+  users       users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "sessions_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+}
+
+model trader_packages {
+  id                BigInt              @id @default(autoincrement())
+  name              String              @db.VarChar(50)
+  min_amount        Decimal             @db.Decimal(18, 2)
+  max_amount        Decimal             @db.Decimal(18, 2)
+  fee_percentage    Decimal             @db.Decimal(5, 2)
+  created_at        DateTime?           @default(now()) @db.DateTime(0)
+  updated_at        DateTime?           @default(now()) @db.DateTime(0)
+  trader_portfolios trader_portfolios[]
+}
+
+model trader_portfolios {
+  id               BigInt          @id @default(autoincrement())
+  user_id          BigInt
+  package_id       BigInt
+  portfolio_amount Decimal         @db.Decimal(18, 2)
+  fee_amount       Decimal?        @db.Decimal(18, 2)
+  created_at       DateTime?       @default(now()) @db.DateTime(0)
+  updated_at       DateTime?       @default(now()) @db.DateTime(0)
+  users            users           @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "trader_portfolios_ibfk_1")
+  trader_packages  trader_packages @relation(fields: [package_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "trader_portfolios_ibfk_2")
+
+  @@index([package_id], map: "package_id")
+  @@index([user_id], map: "user_id")
+}
+
+model user_roles {
+  user_id BigInt
+  role_id BigInt
+  users   users  @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "user_roles_ibfk_1")
+  roles   roles  @relation(fields: [role_id], references: [role_id], onDelete: Cascade, onUpdate: Restrict, map: "user_roles_ibfk_2")
+
+  @@id([user_id, role_id])
+  @@index([role_id], map: "role_id")
+}
+
+model users {
+  user_id             BigInt                @id @default(autoincrement())
+  email               String                @unique(map: "email") @db.VarChar(255)
+  password            String                @db.VarChar(255)
+  created_at          DateTime?             @default(now()) @db.DateTime(0)
+  updated_at          DateTime?             @default(now()) @db.DateTime(0)
+  audit_logs          audit_logs[]
+  investor_portfolios investor_portfolios[]
+  kyc_details         kyc_details[]
+  payments            payments[]
+  sessions            sessions[]
+  trader_portfolios   trader_portfolios[]
+  user_roles          user_roles[]
+}
+
+enum kyc_documents_document_type {
+  Passport
+  ID_Card        @map("ID Card")
+  Driver_License @map("Driver License")
+}
+
+enum kyc_details_document_type {
+  Passport
+  ID_Card        @map("ID Card")
+  Driver_License @map("Driver License")
+}
+
+enum payments_status {
+  Pending
+  Confirmed
+  Rejected
+}
+
+enum kyc_details_kyc_status {
+  Pending
+  Processing
+  Approved
+  Rejected
+}
+
+enum payments_payment_method {
+  USDT
+  BTC
+  ETH
+}

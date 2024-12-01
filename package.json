@@ -2,14 +2,24 @@
   "name": "tradenodejsbackend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app.js",
+  "type": "module",
   "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "prisma:setup": "npx prisma db pull && npx prisma generate && npm run dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "nodemon": "^3.1.7",
     "prisma": "^6.0.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1"
   }
 }
