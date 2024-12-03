@@ -1,4 +1,12 @@
-import { NOT_FOUND, SUCCESS } from "./constant.util";
+import { NOT_FOUND, SUCCESS } from "./constant.util.js";
+
+// utils/convertBigInt.util.js
+export const convertBigIntToString = (data) =>
+  JSON.parse(
+    JSON.stringify(data, (key, value) =>
+      typeof value === "bigint" ? value.toString() : value
+    )
+  );
 
 // CREATE
 export const handleCreate = (
@@ -9,7 +17,7 @@ export const handleCreate = (
   return res.status(SUCCESS).json({
     status: SUCCESS,
     message,
-    result,
+    result: convertBigIntToString(result),
   });
 };
 
@@ -22,20 +30,22 @@ export const handleUpdate = (
   return res.status(SUCCESS).json({
     status: SUCCESS,
     message,
-    result,
+    result: convertBigIntToString(result),
   });
 };
 
 // SUCCESS - GET
 export const handleSuccess = (
   res,
-  message = "Data retrieved successfully.",
-  result = null
+  result = null,
+  count = null,
+  message = "Data retrieved successfully."
 ) => {
   return res.status(SUCCESS).json({
     status: SUCCESS,
     message,
-    result,
+    result: convertBigIntToString(result),
+    ...(count && { count }),
   });
 };
 
@@ -48,7 +58,7 @@ export const hnaldeDelete = (
   return res.status(SUCCESS).json({
     status: SUCCESS,
     message,
-    result,
+    result: convertBigIntToString(result),
   });
 };
 
@@ -63,6 +73,6 @@ export const handleError = (
   return res.status(status_code || NOT_FOUND).json({
     status: return_status_code || NOT_FOUND,
     message,
-    result,
+    result: convertBigIntToString(result),
   });
 };

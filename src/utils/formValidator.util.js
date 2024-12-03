@@ -1,4 +1,17 @@
-const fvNumber = (req, res, key) => {
+export const fvEmail = (req, res, key) => {
+  const value = req.body[key] || req.query[key] || req.params[key];
+
+  if (!value) throw new Error(`${key} is required.`);
+
+  // Regular expression for validating an email format
+  const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+
+  if (!emailRegex.test(value)) throw new Error(`${key} must be a valid email.`);
+
+  return value;
+};
+
+export const fvNumber = (req, res, key) => {
   const value = req.body[key] || req.query[key] || req.params[key];
 
   if (!value) throw new Error(`${key} is required.`);
@@ -7,7 +20,7 @@ const fvNumber = (req, res, key) => {
   return value;
 };
 
-const fvString = (req, res, key) => {
+export const fvString = (req, res, key) => {
   const value = req.body[key] || req.query[key] || req.params[key];
 
   if (!value) throw new Error(`${key} is required.`);
