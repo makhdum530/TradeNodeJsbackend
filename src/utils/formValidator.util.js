@@ -1,4 +1,4 @@
-export const fvEmail = (req, res, key) => {
+export const fvEmail = (req, key) => {
   const value = req.body[key] || req.query[key] || req.params[key];
 
   if (!value) throw new Error(`${key} is required.`);
@@ -11,7 +11,20 @@ export const fvEmail = (req, res, key) => {
   return value;
 };
 
-export const fvNumber = (req, res, key) => {
+export const fvPassword = (req, key) => {
+  const value = req.body[key] || req.query[key] || req.params[key];
+  if (!value) throw new Error(`${key} is required.`);
+  const passwordRegex =
+    /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!passwordRegex.test(value)) {
+    throw new Error(
+      `${key} must be at least 8 characters long and include at least one uppercase letter, one number, and one special character.`
+    );
+  }
+  return value;
+};
+
+export const fvNumber = (req, key) => {
   const value = req.body[key] || req.query[key] || req.params[key];
 
   if (!value) throw new Error(`${key} is required.`);
@@ -20,11 +33,25 @@ export const fvNumber = (req, res, key) => {
   return value;
 };
 
-export const fvString = (req, res, key) => {
-  const value = req.body[key] || req.query[key] || req.params[key];
+export const fvString = (req, key) => {
+  const value =
+    req.body[key] || req.query[key] || req.headers[key] || req.params[key];
 
   if (!value) throw new Error(`${key} is required.`);
   if (typeof value !== "string") throw new Error(`${key} must be a string.`);
+
+  return value;
+};
+
+export const fvEnum = (req, key, allowedValues) => {
+  const value =
+    req.body[key] || req.query[key] || req.headers[key] || req.params[key];
+
+  if (!value) throw new Error(`${key} is required.`);
+  if (typeof value !== "string") throw new Error(`${key} must be a string.`);
+  if (!allowedValues.includes(value)) {
+    throw new Error(`${key} must be one of [${allowedValues.join(", ")}].`);
+  }
 
   return value;
 };

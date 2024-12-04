@@ -1,8 +1,9 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import router from './src/routes/index.js';
-import errorHandler from './src/middlewares/errorHandler.js';
-import cors from 'cors';
+import express from "express";
+import dotenv from "dotenv";
+import router from "./src/routes/index.js";
+import errorHandler from "./src/middlewares/errorHandler.js";
+import cors from "cors";
+import bodyParser from "body-parser";
 
 dotenv.config();
 
@@ -13,11 +14,11 @@ app.use(cors());
 
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.send('Hello World!')
+app.get("/", (req, res) => {
+  res.send("Hello World!");
 });
 
-app.use('/', router);
+app.use("/", router);
 
 // Error handler middleware
 app.use(errorHandler);

@@ -11,8 +11,8 @@ export const convertBigIntToString = (data) =>
 // CREATE
 export const handleCreate = (
   res,
-  message = "Operation successful.",
-  result = null
+  result = null,
+  message = "Operation successful."
 ) => {
   return res.status(SUCCESS).json({
     status: SUCCESS,
@@ -24,8 +24,8 @@ export const handleCreate = (
 // UPDATE
 export const handleUpdate = (
   res,
-  message = "Update successful.",
-  result = null
+  result = null,
+  message = "Update successful."
 ) => {
   return res.status(SUCCESS).json({
     status: SUCCESS,
@@ -52,8 +52,8 @@ export const handleSuccess = (
 // DELET
 export const hnaldeDelete = (
   res,
-  message = "Deletion successful.",
-  result = null
+  result = null,
+  message = "Deletion successful."
 ) => {
   return res.status(SUCCESS).json({
     status: SUCCESS,
@@ -63,13 +63,13 @@ export const hnaldeDelete = (
 };
 
 // Error Response
-export const handleError = (
+export const handleError = ({
   res,
-  message = "An error occurred.",
   result = null,
+  message = "An error occurred.",
   status_code,
-  return_status_code
-) => {
+  return_status_code,
+}) => {
   return res.status(status_code || NOT_FOUND).json({
     status: return_status_code || NOT_FOUND,
     message,
