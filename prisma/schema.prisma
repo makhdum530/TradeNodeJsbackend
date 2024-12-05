@@ -13,8 +13,59 @@ model audit_logs {
   action     String    @db.VarChar(255)
   details    String?   @db.Text
   created_at DateTime? @default(now()) @db.DateTime(0)
-  users      user?     @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "audit_logs_ibfk_1")
+  user       user?     @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "audit_logs_ibfk_1")
 
+  @@index([user_id], map: "user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model company {
+  company_id     BigInt         @id @default(autoincrement())
+  name           String?        @db.VarChar(50)
+  phone          Int?
+  email          String         @unique(map: "email") @db.VarChar(100)
+  address1       String?        @db.VarChar(300)
+  address2       String?        @db.VarChar(300)
+  zip_code       Int?
+  expiry_minutes Int?           @default(10)
+  media_url      String?        @db.VarChar(300)
+  created_at     DateTime       @default(now()) @db.Timestamp(0)
+  updated_at     DateTime       @default(now()) @db.Timestamp(0)
+  status         company_status @default(active)
+  document       document[]
+  session        session[]
+  user           user[]
+  vendor         vendor[]
+}
+
+model country {
+  country_id      BigInt         @id @default(autoincrement())
+  code            String         @db.Char(2)
+  name            String         @db.VarChar(100)
+  phone_code      Int
+  currency_symbol String?        @db.VarChar(10)
+  currency        String?        @db.VarChar(3)
+  status          country_status @default(active)
+  user            user[]
+  vendor          vendor[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model document {
+  document_id BigInt                @id @default(autoincrement())
+  company_id  BigInt?
+  user_id     BigInt?
+  title       String?               @db.VarChar(50)
+  media_url   String?               @db.VarChar(200)
+  media_url_2 String?               @db.VarChar(200)
+  is_verified document_is_verified? @default(no)
+  created_at  DateTime              @default(now()) @db.Timestamp(0)
+  updated_at  DateTime              @default(now()) @db.Timestamp(0)
+  status      document_status
+  company     company?              @relation(fields: [company_id], references: [company_id], onDelete: Restrict, onUpdate: Restrict, map: "document_ibfk_1")
+  user        user?                 @relation(fields: [user_id], references: [user_id], onDelete: Restrict, onUpdate: Restrict, map: "document_ibfk_2")
+
+  @@index([company_id], map: "company_id")
   @@index([user_id], map: "user_id")
 }
 
@@ -42,7 +93,7 @@ model investor_portfolios {
   end_date          DateTime?         @db.DateTime(0)
   created_at        DateTime?         @default(now()) @db.DateTime(0)
   updated_at        DateTime?         @default(now()) @db.DateTime(0)
-  users             user              @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "investor_portfolios_ibfk_1")
+  user              user              @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "investor_portfolios_ibfk_1")
   investor_packages investor_packages @relation(fields: [package_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "investor_portfolios_ibfk_2")
 
   @@index([package_id], map: "package_id")
@@ -61,7 +112,7 @@ model kyc_details {
   rejection_reason String?                   @db.VarChar(255)
   created_at       DateTime?                 @default(now()) @db.DateTime(0)
   updated_at       DateTime?                 @default(now()) @db.DateTime(0)
-  users            user                      @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "kyc_details_ibfk_1")
+  user             user                      @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "kyc_details_ibfk_1")
   kyc_documents    kyc_documents[]
 
   @@index([user_id], map: "user_id")
@@ -78,6 +129,15 @@ model kyc_documents {
   @@index([kyc_id], map: "kyc_id")
 }
 
+model otp {
+  otp_id     BigInt   @id @default(autoincrement())
+  email      String?  @db.VarChar(100)
+  phone      Int?
+  otp        String?  @db.VarChar(100)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
 model payments {
   id             BigInt                  @id @default(autoincrement())
   user_id        BigInt
@@ -90,16 +150,37 @@ model payments {
   payment_date   DateTime?               @default(now()) @db.DateTime(0)
   created_at     DateTime?               @default(now()) @db.DateTime(0)
   updated_at     DateTime?               @default(now()) @db.DateTime(0)
-  users          user                    @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "payments_ibfk_1")
+  user           user                    @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "payments_ibfk_1")
 
   @@index([user_id], map: "user_id")
 }
 
-model roles {
-  role_id     BigInt       @id @default(autoincrement())
-  name        String       @unique(map: "name") @db.VarChar(50)
-  description String?      @db.VarChar(255)
-  user_roles  user_roles[]
+model role {
+  role_id     BigInt   @id @default(autoincrement())
+  title       String   @unique(map: "name") @db.VarChar(50)
+  description String?  @db.VarChar(255)
+  user        user[]
+  vendor      vendor[]
+}
+
+model session {
+  session_id        BigInt               @id @default(autoincrement())
+  company_id        BigInt?
+  user_id           BigInt
+  anroid_token      String?              @db.VarChar(100)
+  ios_token         String?              @db.VarChar(100)
+  web_token         String?              @db.VarChar(100)
+  device_id_android String?              @db.VarChar(100)
+  device_id_ios     String?              @db.VarChar(100)
+  device_id_web     String?              @db.VarChar(100)
+  device_type       session_device_type?
+  created_at        DateTime?            @default(now()) @db.DateTime(0)
+  expires_at        DateTime             @db.DateTime(0)
+  user              user                 @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "session_ibfk_1")
+  company           company?             @relation(fields: [company_id], references: [company_id], onDelete: Restrict, onUpdate: Restrict, map: "session_ibfk_2")
+
+  @@index([company_id], map: "company_id")
+  @@index([user_id], map: "user_id")
 }
 
 model trader_packages {
@@ -121,88 +202,76 @@ model trader_portfolios {
   fee_amount       Decimal?        @db.Decimal(18, 2)
   created_at       DateTime?       @default(now()) @db.DateTime(0)
   updated_at       DateTime?       @default(now()) @db.DateTime(0)
-  users            user            @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "trader_portfolios_ibfk_1")
+  user             user            @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "trader_portfolios_ibfk_1")
   trader_packages  trader_packages @relation(fields: [package_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "trader_portfolios_ibfk_2")
 
   @@index([package_id], map: "package_id")
   @@index([user_id], map: "user_id")
 }
 
-model user_roles {
-  user_id BigInt
-  role_id BigInt
-  users   user   @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "user_roles_ibfk_1")
-  roles   roles  @relation(fields: [role_id], references: [role_id], onDelete: Cascade, onUpdate: Restrict, map: "user_roles_ibfk_2")
-
-  @@id([user_id, role_id])
-  @@index([role_id], map: "role_id")
-}
-
-model otp {
-  otp_id     BigInt   @id @default(autoincrement())
-  email      String?  @db.VarChar(100)
-  phone      Int?
-  otp        String?  @db.VarChar(100)
-  created_at DateTime @default(now()) @db.Timestamp(0)
-  updated_at DateTime @default(now()) @db.Timestamp(0)
-}
-
-model session {
-  session_id        BigInt               @id @default(autoincrement())
-  company_id        BigInt?
-  user_id           BigInt
-  anroid_token      String?              @db.VarChar(100)
-  ios_token         String?              @db.VarChar(100)
-  web_token         String?              @db.VarChar(100)
-  device_id_android String?              @db.VarChar(100)
-  device_id_ios     String?              @db.VarChar(100)
-  device_id_web     String?              @db.VarChar(100)
-  device_type       session_device_type?
-  created_at        DateTime?            @default(now()) @db.DateTime(0)
-  expires_at        DateTime             @db.DateTime(0)
-  user              user                 @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "session_ibfk_1")
-  company           company?             @relation(fields: [company_id], references: [company_id], onDelete: Restrict, onUpdate: Restrict, map: "session_ibfk_2")
-
-  @@index([user_id], map: "user_id")
-  @@index([company_id], map: "company_id")
-}
-
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model user {
   user_id             BigInt                 @id @default(autoincrement())
   company_id          BigInt?
+  role_id             BigInt?
+  country_id          BigInt?
   email               String                 @unique(map: "email") @db.VarChar(255)
   is_email_verified   user_is_email_verified @default(no)
   password            String                 @db.VarChar(255)
   otp_expiry_time     DateTime               @default(now()) @db.Timestamp(0)
+  first_name          String?                @db.VarChar(50)
+  last_name           String?                @db.VarChar(50)
+  phone               String?                @db.VarChar(20)
+  zip_code            Int?
+  address1            String?                @db.VarChar(200)
+  address2            String?                @db.VarChar(200)
+  media_url           String?                @db.VarChar(200)
   created_at          DateTime?              @default(now()) @db.Timestamp(0)
   updated_at          DateTime?              @default(now()) @db.Timestamp(0)
   status              user_status            @default(active)
   audit_logs          audit_logs[]
+  document            document[]
   investor_portfolios investor_portfolios[]
   kyc_details         kyc_details[]
   payments            payments[]
   session             session[]
   trader_portfolios   trader_portfolios[]
   company             company?               @relation(fields: [company_id], references: [company_id], onDelete: Restrict, onUpdate: Restrict, map: "user_ibfk_1")
-  user_roles          user_roles[]
+  country             country?               @relation(fields: [country_id], references: [country_id], onDelete: Restrict, onUpdate: Restrict, map: "user_ibfk_2")
+  role                role?                  @relation(fields: [role_id], references: [role_id], onDelete: Restrict, onUpdate: Restrict, map: "user_ibfk_3")
 
   @@index([company_id], map: "company_id")
+  @@index([country_id], map: "country_id")
+  @@index([role_id], map: "role_id")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model company {
-  company_id     BigInt         @id @default(autoincrement())
-  name           String?        @db.VarChar(50)
-  phone          Int?
-  address1       String?        @db.VarChar(300)
-  address2       String?        @db.VarChar(300)
-  expiry_minutes Int?           @default(10)
-  media_url      String?        @db.VarChar(300)
-  created_at     DateTime       @default(now()) @db.Timestamp(0)
-  updated_at     DateTime       @default(now()) @db.Timestamp(0)
-  status         company_status @default(active)
-  session        session[]
-  user           user[]
+model vendor {
+  vendor_id         BigInt                   @id @default(autoincrement())
+  company_id        BigInt?
+  role_id           BigInt?
+  country_id        BigInt?
+  email             String                   @unique(map: "email") @db.VarChar(255)
+  is_email_verified vendor_is_email_verified @default(no)
+  password          String                   @db.VarChar(255)
+  otp_expiry_time   DateTime                 @default(now()) @db.Timestamp(0)
+  first_name        String?                  @db.VarChar(50)
+  last_name         String?                  @db.VarChar(50)
+  phone             String?                  @db.VarChar(20)
+  zip_code          Int?
+  address1          String?                  @db.VarChar(200)
+  address2          String?                  @db.VarChar(200)
+  media_url         String?                  @db.VarChar(200)
+  created_at        DateTime?                @default(now()) @db.Timestamp(0)
+  updated_at        DateTime?                @default(now()) @db.Timestamp(0)
+  status            vendor_status            @default(active)
+  company           company?                 @relation(fields: [company_id], references: [company_id], onDelete: Restrict, onUpdate: Restrict, map: "vendor_ibfk_1")
+  country           country?                 @relation(fields: [country_id], references: [country_id], onDelete: Restrict, onUpdate: Restrict, map: "vendor_ibfk_2")
+  role              role?                    @relation(fields: [role_id], references: [role_id], onDelete: Restrict, onUpdate: Restrict, map: "vendor_ibfk_3")
+
+  @@index([company_id], map: "company_id")
+  @@index([country_id], map: "country_id")
+  @@index([role_id], map: "role_id")
 }
 
 enum kyc_documents_document_type {
@@ -215,6 +284,21 @@ enum kyc_details_document_type {
   Passport
   ID_Card        @map("ID Card")
   Driver_License @map("Driver License")
+}
+
+enum user_is_email_verified {
+  yes
+  no
+}
+
+enum vendor_is_email_verified {
+  yes
+  no
+}
+
+enum document_is_verified {
+  yes
+  no
 }
 
 enum payments_status {
@@ -241,9 +325,9 @@ enum company_status {
   inactive
 }
 
-enum user_is_email_verified {
-  yes
-  no
+enum document_status {
+  active
+  inactive
 }
 
 enum session_device_type {
@@ -253,6 +337,16 @@ enum session_device_type {
 }
 
 enum user_status {
+  active
+  inactive
+}
+
+enum vendor_status {
+  active
+  inactive
+}
+
+enum country_status {
   active
   inactive
 }

@@ -1,10 +1,16 @@
+import crypto from "crypto";
 import moment from "moment";
+import nodemailer from "nodemailer";
 import { prisma } from "../config/db.js";
 import { decrypt, encrypt } from "../utils/crypto.util.js";
-import { fvEmail, fvPassword, fvString } from "../utils/formValidator.util.js";
-import { handleError, handleSuccess } from "../utils/handleResponse.util.js";
-import nodemailer from "nodemailer";
-import crypto from "crypto";
+import {
+  fvEmail,
+  fvNumber,
+  fvPassword,
+  fvString,
+} from "../utils/formValidator.util.js";
+import { handleError, handleSuccess, handleUpdate } from "../utils/handleResponse.util.js";
+import { FORBIDDEN } from "../utils/constant.util.js";
 
 // async function saveOtp(params) {
 //   const { otp, email } = params;
@@ -66,6 +72,7 @@ export const sendEmailVarificationLink = async (req, res, next) => {
             company_id,
             email,
             password,
+            role_id: 3, //default user role
           },
         });
         user_id = createdData?.user_id;
@@ -157,15 +164,17 @@ export const login = async (req, res, next) => {
     const { company_id, device_type } = req;
     const { email, password, device_id } = req.body;
 
-    const userData = await prisma.user.findFirst({
+    const result = await prisma.user.findFirst({
       where: {
         company_id,
         email,
         password,
       },
     });
-    if (!userData)
+    if (!result)
       return handleError({ res, message: "Invalid email or password" });
+
+    result.user_id = encrypt(result?.user_id);
 
     // Generate a secure token
     const token = crypto.randomBytes(32).toString("hex");
@@ -175,7 +184,7 @@ export const login = async (req, res, next) => {
 
     // Insert session record based on device type
     const sessionData = {
-      user_id: userData.user_id,
+      user_id: result?.user_id,
       company_id,
       expires_at: expiryTime,
     };
@@ -214,7 +223,7 @@ export const login = async (req, res, next) => {
       },
     });
 
-    return handleSuccess(res, "", "", "Login SuccessFully");
+    return handleSuccess(res, result, "", "Login SuccessFully");
   } catch (error) {
     next(error);
   }
@@ -223,19 +232,115 @@ export const login = async (req, res, next) => {
 export const getAll = async (req, res, next) => {
   try {
     const { company_id } = req;
-    const {} = req.query;
+    const { order_by, order_by_column, search_keyword } = req.query;
+
+    // Parse pagination
+    const skip = req.query.skip ? parseInt(req.query.skip, 10) : undefined;
+    const take = req.query.take ? parseInt(req.query.take, 10) : undefined;
 
     const where = {
       company_id,
-      // user_id: 1,
     };
+
+    // Add search keyword filter if provided
+    if (search_keyword) {
+      where.OR = [
+        { first_name: { contains: search_keyword } },
+        { last_name: { contains: search_keyword } },
+        { email: { contains: search_keyword } },
+        { phone: { contains: search_keyword } },
+      ];
+    }
+
+    // Define sorting
+    const orderBy =
+      order_by_column && order_by
+        ? { [order_by_column]: order_by.toLowerCase() }
+        : { created_at: "asc" };
 
     const result = await prisma.user.findMany({
       where,
+      select: {
+        first_name: true,
+        last_name: true,
+        email: true,
+        phone: true,
+        address1: true,
+        address2: true,
+        zip_code: true,
+        country: {
+          select: {
+            name: true,
+          },
+        },
+        role: {
+          select: {
+            role_id: true,
+            title: true,
+          },
+        },
+      },
+      skip,
+      take,
+      orderBy,
     });
     const count = await prisma.user.count({ where });
-
     return handleSuccess(res, result, count);
+  } catch (error) {
+    next(error);
+  }
+};
+
+//UPDATE
+export const update = async (req, res, next) => {
+  try {
+    const { company_id, login_user_id, role_id } = req;
+    const { id } = req.params;
+    const decrypted_user_id = decrypt(id);
+
+    const {
+      first_name,
+      last_name,
+      email,
+      phone,
+      address1,
+      address2,
+      zip_code,
+    } = req.body;
+
+    fvString(req, "id");
+    fvString(req, "first_name");
+    last_name && fvString(req, "last_name");
+    fvEmail(req, "email");
+    fvNumber(req, "phone");
+    fvString(req, "address1");
+    address2 && fvString(req, "address2");
+    fvNumber(req, "zip_code");
+
+    if (role_id != 1 && login_user_id != decrypted_user_id) {
+      return handleError({
+        res,
+        message: "Access denied. Only Super Admins can perform this action.",
+        status_code: FORBIDDEN,
+        return_status_code: FORBIDDEN,
+      });
+    }
+    const result = await prisma.user.update({
+      where: {
+        company_id,
+        user_id: decrypted_user_id,
+      },
+      data: {
+        first_name,
+        last_name,
+        email,
+        phone,
+        address1,
+        address2,
+        zip_code,
+      },
+    });
+    return handleUpdate(res, result);
   } catch (error) {
     next(error);
   }

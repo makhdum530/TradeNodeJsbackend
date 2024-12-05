@@ -3,12 +3,19 @@ import {
   getAll,
   login,
   sendEmailVarificationLink,
+  update,
   verifyEmail,
 } from "../controllers/user.controller.js";
-import { validateCompanyMiddleware, validateLoginMiddleware } from "../middlewares/auth.js";
+import {
+  validateCompanyMiddleware,
+  validateLoginMiddleware,
+} from "../middlewares/auth.js";
+import { permissionSuperAdmin } from "../middlewares/permission.js";
 const router = express.Router();
 
-router.get("/",validateLoginMiddleware, getAll);
+router.get("/", validateLoginMiddleware,permissionSuperAdmin(), getAll);
+router.put("/:id", validateLoginMiddleware, update);
+
 router.post(
   "/sendEmailVarificationLink",
   validateCompanyMiddleware,

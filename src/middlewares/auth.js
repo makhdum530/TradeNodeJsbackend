@@ -66,6 +66,9 @@ export const validateLoginMiddleware = async (req, res, next) => {
     if (!user)
       return handleError({ res, message: "Invalid or inactive user." });
 
+    req.login_user_id = user_id;
+    req.role_id = Number(user?.role_id);
+    
     // Determine the token column based on the device type
     const tokenColumn =
       devicetype === "ANDROID"
