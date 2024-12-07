@@ -9,7 +9,11 @@ import {
   fvPassword,
   fvString,
 } from "../utils/formValidator.util.js";
-import { handleError, handleSuccess, handleUpdate } from "../utils/handleResponse.util.js";
+import {
+  handleError,
+  handleSuccess,
+  handleUpdate,
+} from "../utils/handleResponse.util.js";
 import { FORBIDDEN } from "../utils/constant.util.js";
 
 // async function saveOtp(params) {
@@ -38,21 +42,21 @@ export const sendEmailVarificationLink = async (req, res, next) => {
     fvPassword(req, "password");
 
     await prisma.$transaction(async (tx) => {
-      const existUser = await tx.user.findFirst({
+      const existUser = await tx.company_user.findFirst({
         where: {
           company_id,
           email,
         },
       });
-      let user_id = null;
+      let company_user_id = null;
       if (existUser) {
-        user_id = existUser?.user_id;
+        company_user_id = existUser?.company_user_id;
 
         //UPDATE OTP-EXPIRY-MIN
-        await tx.user.update({
+        await tx.company_user.update({
           where: {
             company_id,
-            user_id,
+            company_user_id,
           },
           data: {
             otp_expiry_time: new Date(),
@@ -67,7 +71,7 @@ export const sendEmailVarificationLink = async (req, res, next) => {
       }
 
       if (!existUser) {
-        const createdData = await tx.user.create({
+        const createdData = await tx.company_user.create({
           data: {
             company_id,
             email,
@@ -75,10 +79,10 @@ export const sendEmailVarificationLink = async (req, res, next) => {
             role_id: 3, //default user role
           },
         });
-        user_id = createdData?.user_id;
+        company_user_id = createdData?.company_user_id;
       }
 
-      const encryptedData = encrypt(user_id);
+      const encryptedData = encrypt(company_user_id);
       const verificationLink = `${process.env.API_URL}/verify/${encryptedData}`;
 
       // Set up nodemailer transporter
@@ -115,12 +119,12 @@ export const verifyEmail = async (req, res, next) => {
     const { id } = req.params;
 
     fvString(req, "id");
-    const decrypted_user_id = decrypt(id);
+    const decrypted_company_user_id = decrypt(id);
 
-    const existUser = await prisma.user.findFirst({
+    const existUser = await prisma.company_user.findFirst({
       where: {
         company_id,
-        user_id: decrypted_user_id,
+        company_user_id: decrypted_company_user_id,
       },
       select: {
         is_email_verified: true,
@@ -142,10 +146,10 @@ export const verifyEmail = async (req, res, next) => {
       throw new Error("OTP has expired. Please request a new OTP.");
     }
 
-    const result = await prisma.user.update({
+    const result = await prisma.company_user.update({
       where: {
         company_id,
-        user_id: decrypted_user_id,
+        company_user_id: decrypted_company_user_id,
         // is_email_verified: "no",
       },
       data: {
@@ -164,7 +168,7 @@ export const login = async (req, res, next) => {
     const { company_id, device_type } = req;
     const { email, password, device_id } = req.body;
 
-    const result = await prisma.user.findFirst({
+    const result = await prisma.company_user.findFirst({
       where: {
         company_id,
         email,
@@ -182,7 +186,7 @@ export const login = async (req, res, next) => {
 
     // Insert session record based on device type
     const sessionData = {
-      user_id: result?.user_id,
+      company_user_id: result?.company_user_id,
       company_id,
       expires_at: expiryTime,
     };
@@ -212,7 +216,7 @@ export const login = async (req, res, next) => {
       return handleError({ res, message: "Invalid device type" });
 
     // Create session with device-specific data
-    await prisma.session.create({
+    await prisma.company_session.create({
       data: {
         ...sessionData,
         [deviceConfig.token_field]: token,
@@ -220,7 +224,8 @@ export const login = async (req, res, next) => {
         device_type: deviceConfig.device_type,
       },
     });
-    result.user_id = encrypt(result?.user_id);
+    result.company_user_id = encrypt(result?.company_user_id);
+    result.login_token = token;
 
     return handleSuccess(res, result, "", "Login SuccessFully");
   } catch (error) {
@@ -257,7 +262,7 @@ export const getAll = async (req, res, next) => {
         ? { [order_by_column]: order_by.toLowerCase() }
         : { created_at: "asc" };
 
-    const result = await prisma.user.findMany({
+    const result = await prisma.company_user.findMany({
       where,
       select: {
         first_name: true,
@@ -283,19 +288,17 @@ export const getAll = async (req, res, next) => {
       take,
       orderBy,
     });
-    const count = await prisma.user.count({ where });
+    const count = await prisma.company_user.count({ where });
     return handleSuccess(res, result, count);
   } catch (error) {
     next(error);
   }
 };
 
-//UPDATE
-export const update = async (req, res, next) => {
+//CREATE
+export const create = async (req, res, next) => {
   try {
-    const { company_id, login_user_id, role_id } = req;
-    const { id } = req.params;
-    const decrypted_user_id = decrypt(id);
+    const { company_id, login_company_user_id, role_id } = req;
 
     const {
       first_name,
@@ -305,6 +308,91 @@ export const update = async (req, res, next) => {
       address1,
       address2,
       zip_code,
+      manager_role_id,
+      password,
+    } = req.body;
+
+    fvString(req, "first_name");
+    last_name && fvString(req, "last_name");
+    fvEmail(req, "email");
+    fvNumber(req, "phone");
+    fvString(req, "address1");
+    address2 && fvString(req, "address2");
+    fvNumber(req, "zip_code");
+    fvNumber(req, "manager_role_id");
+    fvString(req, "password");
+
+    if (role_id != 2) {
+      return handleError({
+        res,
+        message: "Access denied. Only Admins can perform this action.",
+        status_code: FORBIDDEN,
+        return_status_code: FORBIDDEN,
+      });
+    }
+
+    if (manager_role_id != 4) {
+      return handleError({
+        res,
+        message: "Only Manager Role Accepted.",
+        status_code: FORBIDDEN,
+        return_status_code: FORBIDDEN,
+      });
+    }
+
+    const existData = await prisma.company_user.findFirst({
+      where: {
+        company_id,
+        email,
+      },
+    });
+    if (existData) {
+      return handleError({
+        res,
+        message: "Email Already Exist",
+        status_code: FORBIDDEN,
+        return_status_code: FORBIDDEN,
+      });
+    }
+
+    const result = await prisma.company_user.create({
+      data: {
+        company_id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        address1,
+        address2,
+        zip_code,
+        role_id: manager_role_id,
+        password,
+        created_at: new Date(),
+      },
+    });
+    result.company_user_id = encrypt(result.company_user_id);
+    return handleUpdate(res, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+//UPDATE
+export const update = async (req, res, next) => {
+  try {
+    const { company_id, login_company_user_id, role_id } = req;
+    const { id } = req.params;
+    const decrypted_company_user_id = decrypt(id);
+
+    const {
+      first_name,
+      last_name,
+      email,
+      phone,
+      address1,
+      address2,
+      zip_code,
+      password,
     } = req.body;
 
     fvString(req, "id");
@@ -315,8 +403,9 @@ export const update = async (req, res, next) => {
     fvString(req, "address1");
     address2 && fvString(req, "address2");
     fvNumber(req, "zip_code");
+    fvString(req, "password");
 
-    if (role_id != 1 && login_user_id != decrypted_user_id) {
+    if (role_id != 2 && login_company_user_id != decrypted_company_user_id) {
       return handleError({
         res,
         message: "Access denied. Only Super Admins can perform this action.",
@@ -324,10 +413,10 @@ export const update = async (req, res, next) => {
         return_status_code: FORBIDDEN,
       });
     }
-    const result = await prisma.user.update({
+    const result = await prisma.company_user.update({
       where: {
         company_id,
-        user_id: decrypted_user_id,
+        company_user_id: decrypted_company_user_id,
       },
       data: {
         first_name,
@@ -337,6 +426,7 @@ export const update = async (req, res, next) => {
         address1,
         address2,
         zip_code,
+        password,
       },
     });
     return handleUpdate(res, result);

@@ -20,22 +20,24 @@ model audit_logs {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model company {
-  company_id     BigInt         @id @default(autoincrement())
-  name           String?        @db.VarChar(50)
-  phone          Int?
-  email          String         @unique(map: "email") @db.VarChar(100)
-  address1       String?        @db.VarChar(300)
-  address2       String?        @db.VarChar(300)
-  zip_code       Int?
-  expiry_minutes Int?           @default(10)
-  media_url      String?        @db.VarChar(300)
-  created_at     DateTime       @default(now()) @db.Timestamp(0)
-  updated_at     DateTime       @default(now()) @db.Timestamp(0)
-  status         company_status @default(active)
-  document       document[]
-  session        session[]
-  user           user[]
-  vendor         vendor[]
+  company_id      BigInt            @id @default(autoincrement())
+  name            String?           @db.VarChar(50)
+  phone           Int?
+  email           String            @unique(map: "email") @db.VarChar(100)
+  address1        String?           @db.VarChar(300)
+  address2        String?           @db.VarChar(300)
+  zip_code        Int?
+  expiry_minutes  Int?              @default(10)
+  media_url       String?           @db.VarChar(300)
+  created_at      DateTime          @default(now()) @db.Timestamp(0)
+  updated_at      DateTime          @default(now()) @db.Timestamp(0)
+  status          company_status    @default(active)
+  company_session company_session[]
+  company_user    company_user[]
+  document        document[]
+  session         session[]
+  user            user[]
+  vendor          vendor[]
 }
 
 model country {
@@ -46,6 +48,7 @@ model country {
   currency_symbol String?        @db.VarChar(10)
   currency        String?        @db.VarChar(3)
   status          country_status @default(active)
+  company_user    company_user[]
   user            user[]
   vendor          vendor[]
 }
@@ -156,11 +159,12 @@ model payments {
 }
 
 model role {
-  role_id     BigInt   @id @default(autoincrement())
-  title       String   @unique(map: "name") @db.VarChar(50)
-  description String?  @db.VarChar(255)
-  user        user[]
-  vendor      vendor[]
+  role_id      BigInt         @id @default(autoincrement())
+  title        String         @unique(map: "name") @db.VarChar(50)
+  description  String?        @db.VarChar(255)
+  company_user company_user[]
+  user         user[]
+  vendor       vendor[]
 }
 
 model session {
@@ -274,6 +278,56 @@ model vendor {
   @@index([role_id], map: "role_id")
 }
 
+model company_session {
+  company_session_id BigInt                       @id @default(autoincrement())
+  company_id         BigInt?
+  company_user_id    BigInt
+  anroid_token       String?                      @db.VarChar(100)
+  ios_token          String?                      @db.VarChar(100)
+  web_token          String?                      @db.VarChar(100)
+  device_id_android  String?                      @db.VarChar(100)
+  device_id_ios      String?                      @db.VarChar(100)
+  device_id_web      String?                      @db.VarChar(100)
+  device_type        company_session_device_type?
+  created_at         DateTime?                    @default(now()) @db.DateTime(0)
+  expires_at         DateTime                     @db.DateTime(0)
+  company            company?                     @relation(fields: [company_id], references: [company_id], onDelete: Cascade, onUpdate: Restrict, map: "company_session_ibfk_1")
+  company_user       company_user                 @relation(fields: [company_user_id], references: [company_user_id], onUpdate: Restrict, map: "company_session_ibfk_2")
+
+  @@index([company_id], map: "company_id")
+  @@index([company_user_id], map: "company_user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model company_user {
+  company_user_id   BigInt                         @id @default(autoincrement())
+  company_id        BigInt?
+  role_id           BigInt?
+  country_id        BigInt?
+  email             String                         @unique(map: "email") @db.VarChar(255)
+  is_email_verified company_user_is_email_verified @default(no)
+  password          String                         @db.VarChar(255)
+  otp_expiry_time   DateTime                       @default(now()) @db.Timestamp(0)
+  first_name        String?                        @db.VarChar(50)
+  last_name         String?                        @db.VarChar(50)
+  phone             String?                        @db.VarChar(20)
+  zip_code          Int?
+  address1          String?                        @db.VarChar(200)
+  address2          String?                        @db.VarChar(200)
+  media_url         String?                        @db.VarChar(200)
+  created_at        DateTime?                      @default(now()) @db.Timestamp(0)
+  updated_at        DateTime?                      @default(now()) @db.Timestamp(0)
+  status            company_user_status            @default(active)
+  company_session   company_session[]
+  company           company?                       @relation(fields: [company_id], references: [company_id], onDelete: Cascade, onUpdate: Restrict, map: "company_user_ibfk_1")
+  country           country?                       @relation(fields: [country_id], references: [country_id], onDelete: Restrict, onUpdate: Restrict, map: "company_user_ibfk_2")
+  role              role?                          @relation(fields: [role_id], references: [role_id], onDelete: Restrict, onUpdate: Restrict, map: "company_user_ibfk_3")
+
+  @@index([company_id], map: "company_id")
+  @@index([country_id], map: "country_id")
+  @@index([role_id], map: "role_id")
+}
+
 enum kyc_documents_document_type {
   Passport
   ID_Card        @map("ID Card")
@@ -347,6 +401,22 @@ enum vendor_status {
 }
 
 enum country_status {
+  active
+  inactive
+}
+
+enum company_user_is_email_verified {
+  yes
+  no
+}
+
+enum company_session_device_type {
+  WEB
+  ANDROID
+  IOS
+}
+
+enum company_user_status {
   active
   inactive
 }
