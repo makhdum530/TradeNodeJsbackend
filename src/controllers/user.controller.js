@@ -9,7 +9,11 @@ import {
   fvPassword,
   fvString,
 } from "../utils/formValidator.util.js";
-import { handleError, handleSuccess, handleUpdate } from "../utils/handleResponse.util.js";
+import {
+  handleError,
+  handleSuccess,
+  handleUpdate,
+} from "../utils/handleResponse.util.js";
 import { FORBIDDEN } from "../utils/constant.util.js";
 
 // async function saveOtp(params) {
@@ -62,10 +66,10 @@ export const sendEmailVarificationLink = async (req, res, next) => {
         if (existUser && existUser?.is_email_verified == "yes")
           return handleError({
             res,
-            messgae: "verified user exist with same email",
+            message: "verified user exist with same email",
           });
       }
-
+      
       if (!existUser) {
         const createdData = await tx.user.create({
           data: {
