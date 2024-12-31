@@ -15,7 +15,7 @@ export const update = async (req, res, next) => {
     fvNumber(req, "phone");
     fvString(req, "address1");
     fvString(req, "address2");
-    fvNumber(req, "zip_code");
+    fvString(req, "zip_code");
 
     const result = await prisma.company.update({
       where: { company_id },

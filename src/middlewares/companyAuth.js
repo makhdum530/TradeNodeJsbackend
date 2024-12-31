@@ -4,7 +4,7 @@ import { decrypt, encrypt } from "../utils/crypto.util.js";
 import { fvEnum, fvString } from "../utils/formValidator.util.js";
 import { handleError } from "../utils/handleResponse.util.js";
 
-export const validateCompanyMiddleware = async (req, res, next) => {
+export const validateCompanyMiddlewareCompanyAuth = async (req, res, next) => {
   try {
     fvString(req, "companyid");
     fvEnum(req, "devicetype", ["ANDROID", "IOS", "WEB"]);
@@ -34,11 +34,11 @@ export const validateCompanyMiddleware = async (req, res, next) => {
   }
 };
 
-export const validateLoginMiddleware = async (req, res, next) => {
+export const validateLoginMiddlewareCompanyAuth = async (req, res, next) => {
   try {
     // Call the company verification middleware as a child function
     await new Promise((resolve, reject) => {
-      validateCompanyMiddleware(req, res, (err) => {
+      validateCompanyMiddlewareCompanyAuth(req, res, (err) => {
         if (err) reject(err);
         else resolve();
       });
@@ -47,6 +47,7 @@ export const validateLoginMiddleware = async (req, res, next) => {
     // Validate required headers
     fvEnum(req, "devicetype", ["ANDROID", "IOS", "WEB"]);
     fvString(req, "logintoken");
+    fvString(req, "userid");
 
     const devicetype = req.headers.devicetype;
     const logintoken = req.headers.logintoken;

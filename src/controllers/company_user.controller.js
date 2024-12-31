@@ -6,6 +6,7 @@ import { decrypt, encrypt } from '../utils/crypto.util.js';
 import { fvEmail, fvNumber, fvPassword, fvString } from '../utils/formValidator.util.js';
 import { handleError, handleSuccess, handleUpdate } from '../utils/handleResponse.util.js';
 import { FORBIDDEN } from '../utils/constant.util.js';
+import { title } from 'process';
 
 // async function saveOtp(params) {
 //   const { otp, email } = params;
@@ -242,6 +243,7 @@ export const getAll = async (req, res, next) => {
 		const result = await prisma.company_user.findMany({
 			where,
 			select: {
+				company_user_id: true,
 				first_name: true,
 				last_name: true,
 				email: true,
@@ -265,8 +267,17 @@ export const getAll = async (req, res, next) => {
 			take,
 			orderBy,
 		});
+
+		// Encrypt user IDs
+		const encryptedResult = await Promise.all(
+			result.map(async (user) => ({
+				...user,
+				company_user_id: encrypt(user.company_user_id),
+			}))
+		);
+
 		const count = await prisma.company_user.count({ where });
-		return handleSuccess(res, result, count);
+		return handleSuccess(res, encryptedResult, count);
 	} catch (error) {
 		next(error);
 	}
@@ -285,7 +296,7 @@ export const create = async (req, res, next) => {
 		fvNumber(req, 'phone');
 		fvString(req, 'address1');
 		address2 && fvString(req, 'address2');
-		fvNumber(req, 'zip_code');
+		fvString(req, 'zip_code');
 		fvNumber(req, 'manager_role_id');
 		fvString(req, 'password');
 
@@ -349,17 +360,18 @@ export const update = async (req, res, next) => {
 	try {
 		const { company_id, login_company_user_id, role_id } = req;
 		const { id } = req.params;
-		const decrypted_company_user_id = decrypt(id);
 		const { first_name, last_name, email, phone, address1, address2, zip_code } = req.body;
 
 		fvString(req, 'id');
+		const decrypted_company_user_id = decrypt(id);
+
 		fvString(req, 'first_name');
 		last_name && fvString(req, 'last_name');
 		fvEmail(req, 'email');
 		fvNumber(req, 'phone');
 		fvString(req, 'address1');
 		address2 && fvString(req, 'address2');
-		fvNumber(req, 'zip_code');
+		fvString(req, 'zip_code');
 
 		if (role_id != 2 && login_company_user_id != decrypted_company_user_id) {
 			return handleError({ res, message: 'Access denied. Only Admins can perform this action.', status_code: FORBIDDEN, return_status_code: FORBIDDEN });
@@ -381,6 +393,51 @@ export const update = async (req, res, next) => {
 			},
 		});
 		return handleUpdate(res, result);
+	} catch (error) {
+		next(error);
+	}
+};
+
+//GET BY ID
+export const getById = async (req, res, next) => {
+	try {
+		const { company_id, login_company_user_id, role_id } = req;
+		const { id } = req.params;
+
+		fvString(req, 'id');
+		const decrypted_company_user_id = decrypt(id);
+
+		const result = await prisma.company_user.findFirstOrThrow({
+			where: {
+				company_id,
+				company_user_id: decrypted_company_user_id,
+			},
+			select: {
+				is_email_verified: true,
+				media_url: true,
+				first_name: true,
+				last_name: true,
+				email: true,
+				phone: true,
+				address1: true,
+				address2: true,
+				zip_code: true,
+				created_at:true,
+				country: {
+					select: {
+						name: true,
+						phone_code: true,
+						currency: true,
+					},
+				},
+				role: {
+					select: {
+						title: true,
+					},
+				},
+			},
+		});
+		return handleSuccess(res, result);
 	} catch (error) {
 		next(error);
 	}

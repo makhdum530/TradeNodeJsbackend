@@ -221,12 +221,12 @@ model user {
   country_id          BigInt?
   email               String                 @unique(map: "email") @db.VarChar(255)
   is_email_verified   user_is_email_verified @default(no)
-  password            String                 @db.VarChar(255)
+  password            String?                @db.VarChar(255)
   otp_expiry_time     DateTime               @default(now()) @db.Timestamp(0)
   first_name          String?                @db.VarChar(50)
   last_name           String?                @db.VarChar(50)
   phone               String?                @db.VarChar(20)
-  zip_code            Int?
+  zip_code            String?                @db.VarChar(20)
   address1            String?                @db.VarChar(200)
   address2            String?                @db.VarChar(200)
   media_url           String?                @db.VarChar(200)
@@ -262,7 +262,7 @@ model vendor {
   first_name        String?                  @db.VarChar(50)
   last_name         String?                  @db.VarChar(50)
   phone             String?                  @db.VarChar(20)
-  zip_code          Int?
+  zip_code          String?                  @db.VarChar(20)
   address1          String?                  @db.VarChar(200)
   address2          String?                  @db.VarChar(200)
   media_url         String?                  @db.VarChar(200)
@@ -306,12 +306,12 @@ model company_user {
   country_id        BigInt?
   email             String                         @unique(map: "email") @db.VarChar(255)
   is_email_verified company_user_is_email_verified @default(no)
-  password          String                         @db.VarChar(255)
+  password          String?                        @db.VarChar(255)
   otp_expiry_time   DateTime                       @default(now()) @db.Timestamp(0)
   first_name        String?                        @db.VarChar(50)
   last_name         String?                        @db.VarChar(50)
   phone             String?                        @db.VarChar(20)
-  zip_code          Int?
+  zip_code          String?                        @db.VarChar(20)
   address1          String?                        @db.VarChar(200)
   address2          String?                        @db.VarChar(200)
   media_url         String?                        @db.VarChar(200)
@@ -326,6 +326,19 @@ model company_user {
   @@index([company_id], map: "company_id")
   @@index([country_id], map: "country_id")
   @@index([role_id], map: "role_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model assigned_user {
+  assigned_user_id BigInt                @id @default(autoincrement())
+  company_id       BigInt?
+  company_user_id  BigInt?
+  user_id          BigInt?
+  created_at       DateTime              @default(now()) @db.Timestamp(0)
+  updated_at       DateTime              @default(now()) @db.Timestamp(0)
+  status           assigned_user_status? @default(active)
+
+  @@index([company_id], map: "company_id")
 }
 
 enum kyc_documents_document_type {
@@ -417,6 +430,11 @@ enum company_session_device_type {
 }
 
 enum company_user_status {
+  active
+  inactive
+}
+
+enum assigned_user_status {
   active
   inactive
 }

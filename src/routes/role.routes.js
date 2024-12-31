@@ -1,12 +1,12 @@
 import express from 'express';
 import { create, getAll, remove, update } from '../controllers/role.controller.js';
-import { validateLoginMiddleware } from '../middlewares/auth.js';
+import { validateLoginMiddlewareCompanyAuth } from '../middlewares/companyAuth.js';
 import { permissionSuperAdmin } from '../middlewares/permission.js';
 const router = express.Router();
 
-router.get('/', validateLoginMiddleware, getAll);
-router.put('/:id', validateLoginMiddleware, update);
-router.post('/', validateLoginMiddleware, create);
-router.delete('/:id', validateLoginMiddleware, remove);
+router.get('/', validateLoginMiddlewareCompanyAuth, permissionSuperAdmin(), getAll);
+router.put('/:id', validateLoginMiddlewareCompanyAuth, permissionSuperAdmin(), update);
+router.post('/', validateLoginMiddlewareCompanyAuth, permissionSuperAdmin(), create);
+router.delete('/:id', validateLoginMiddlewareCompanyAuth, permissionSuperAdmin(), remove);
 
 export default router;

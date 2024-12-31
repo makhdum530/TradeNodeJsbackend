@@ -47,11 +47,12 @@ export const validateLoginMiddleware = async (req, res, next) => {
     // Validate required headers
     fvEnum(req, "devicetype", ["ANDROID", "IOS", "WEB"]);
     fvString(req, "logintoken");
+    fvString(req, "userid");
 
     const devicetype = req.headers.devicetype;
     const logintoken = req.headers.logintoken;
     const company_id = req.company_id; // Assumes company_id is already set by previous middleware (e.g., validateCompanyMiddleware)
-    const userid = req.headers.userid; // Assumes company_id is already set by previous middleware (e.g., validateCompanyMiddleware)
+    const userid = req.headers.userid;
     const user_id = decrypt(userid);
 
     // Fetch user details to check user status
