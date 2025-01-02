@@ -342,7 +342,7 @@ export const create = async (req, res, next) => {
 				phone,
 				address1,
 				address2,
-				zip_code,
+				zip_code: zip_code || null,
 				role_id: manager_role_id,
 				password,
 				created_at: new Date(),
@@ -389,7 +389,7 @@ export const update = async (req, res, next) => {
 				phone,
 				address1,
 				address2,
-				zip_code,
+				zip_code: zip_code || null,
 			},
 		});
 		return handleUpdate(res, result);
@@ -422,7 +422,7 @@ export const getById = async (req, res, next) => {
 				address1: true,
 				address2: true,
 				zip_code: true,
-				created_at:true,
+				created_at: true,
 				country: {
 					select: {
 						name: true,

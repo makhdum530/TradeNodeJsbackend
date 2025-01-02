@@ -103,6 +103,40 @@ export const register = async (req, res, next) => {
 	}
 };
 
+//RESEND EMAIL
+export const resendEmail = async (req, res, next) => {
+	try {
+		const { company_id, login_user_id, login_user_email } = req;
+
+		const encryptedData = encrypt(login_user_id);
+		const verificationLink = `${process.env.API_URL}/verify/${encryptedData}`;
+
+		// Set up nodemailer transporter
+		const transporter = nodemailer.createTransport({
+			service: 'Gmail', // Replace with your email service
+			auth: {
+				user: process.env.EMAIL_USERNAME, // Your email address
+				pass: process.env.EMAIL_PASSWORD, // Your email password
+			},
+		});
+
+		// Define the email content
+		const mailOptions = {
+			from: process.env.EMAIL_USERNAME,
+			to: login_user_email,
+			subject: 'Email Verification',
+			text: `Click the link below to verify your email:\n${verificationLink}`,
+		};
+
+		// Send the email
+		await transporter.sendMail(mailOptions);
+
+		return handleSuccess(res, verificationLink);
+	} catch (error) {
+		next(error);
+	}
+};
+
 //VERIFY EMAIL
 export const verifyEmail = async (req, res, next) => {
 	try {
@@ -365,7 +399,7 @@ export const update = async (req, res, next) => {
 				phone,
 				address1,
 				address2,
-				zip_code,
+				zip_code: zip_code || null,
 				profile_filling: 'yes',
 			},
 		});

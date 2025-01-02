@@ -25,7 +25,7 @@ export const update = async (req, res, next) => {
         phone,
         address1,
         address2,
-        zip_code,
+				zip_code: zip_code || null,
       },
     });
     return handleUpdate(res, result);
