@@ -20,24 +20,27 @@ model audit_logs {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model company {
-  company_id      BigInt            @id @default(autoincrement())
-  name            String?           @db.VarChar(50)
-  phone           Int?
-  email           String            @unique(map: "email") @db.VarChar(100)
-  address1        String?           @db.VarChar(300)
-  address2        String?           @db.VarChar(300)
-  zip_code        Int?
-  expiry_minutes  Int?              @default(10)
-  media_url       String?           @db.VarChar(300)
-  created_at      DateTime          @default(now()) @db.Timestamp(0)
-  updated_at      DateTime          @default(now()) @db.Timestamp(0)
-  status          company_status    @default(active)
-  company_session company_session[]
-  company_user    company_user[]
-  document        document[]
-  session         session[]
-  user            user[]
-  vendor          vendor[]
+  company_id               BigInt                     @id @default(autoincrement())
+  name                     String?                    @db.VarChar(50)
+  phone                    Int?
+  email                    String                     @unique(map: "email") @db.VarChar(100)
+  address1                 String?                    @db.VarChar(300)
+  address2                 String?                    @db.VarChar(300)
+  zip_code                 Int?
+  expiry_minutes           Int?                       @default(10)
+  media_url                String?                    @db.VarChar(300)
+  created_at               DateTime                   @default(now()) @db.Timestamp(0)
+  updated_at               DateTime                   @default(now()) @db.Timestamp(0)
+  status                   company_status             @default(active)
+  assigned_user            assigned_user[]
+  company_session          company_session[]
+  company_user             company_user[]
+  document                 document[]
+  investor_packages        investor_packages[]
+  investor_trader_packages investor_trader_packages[]
+  session                  session[]
+  user                     user[]
+  vendor                   vendor[]
 }
 
 model country {
@@ -73,16 +76,23 @@ model document {
 }
 
 model investor_packages {
-  id                  BigInt                @id @default(autoincrement())
-  name                String                @db.VarChar(50)
-  min_amount          Decimal               @db.Decimal(18, 2)
-  max_amount          Decimal               @db.Decimal(18, 2)
-  daily_roi           Decimal               @db.Decimal(5, 4)
-  period_days         Int
-  waiting_period_days Int?                  @default(4)
-  created_at          DateTime?             @default(now()) @db.DateTime(0)
-  updated_at          DateTime?             @default(now()) @db.DateTime(0)
-  investor_portfolios investor_portfolios[]
+  investor_packages_id BigInt                @id @default(autoincrement())
+  company_id           BigInt?
+  role_id              BigInt?
+  name                 String                @db.VarChar(50)
+  min_amount           Decimal               @db.Decimal(18, 2)
+  max_amount           Decimal               @db.Decimal(18, 2)
+  daily_roi            Decimal               @db.Decimal(5, 4)
+  period_days          Int
+  waiting_period_days  Int?                  @default(4)
+  created_at           DateTime?             @default(now()) @db.DateTime(0)
+  updated_at           DateTime?             @default(now()) @db.DateTime(0)
+  company              company?              @relation(fields: [company_id], references: [company_id], onDelete: Cascade, onUpdate: Restrict, map: "investor_packages_ibfk_1")
+  role                 role?                 @relation(fields: [role_id], references: [role_id], onDelete: Restrict, onUpdate: Restrict, map: "investor_packages_ibfk_2")
+  investor_portfolios  investor_portfolios[]
+
+  @@index([company_id], map: "company_id")
+  @@index([role_id], map: "role_id")
 }
 
 model investor_portfolios {
@@ -97,7 +107,7 @@ model investor_portfolios {
   created_at        DateTime?         @default(now()) @db.DateTime(0)
   updated_at        DateTime?         @default(now()) @db.DateTime(0)
   user              user              @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "investor_portfolios_ibfk_1")
-  investor_packages investor_packages @relation(fields: [package_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "investor_portfolios_ibfk_2")
+  investor_packages investor_packages @relation(fields: [package_id], references: [investor_packages_id], onDelete: Cascade, onUpdate: Restrict, map: "investor_portfolios_ibfk_2")
 
   @@index([package_id], map: "package_id")
   @@index([user_id], map: "user_id")
@@ -159,12 +169,14 @@ model payments {
 }
 
 model role {
-  role_id      BigInt         @id @default(autoincrement())
-  title        String         @unique(map: "name") @db.VarChar(50)
-  description  String?        @db.VarChar(255)
-  company_user company_user[]
-  user         user[]
-  vendor       vendor[]
+  role_id                  BigInt                     @id @default(autoincrement())
+  title                    String                     @unique(map: "name") @db.VarChar(50)
+  description              String?                    @db.VarChar(255)
+  company_user             company_user[]
+  investor_packages        investor_packages[]
+  investor_trader_packages investor_trader_packages[]
+  user                     user[]
+  vendor                   vendor[]
 }
 
 model session {
@@ -215,34 +227,41 @@ model trader_portfolios {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model user {
-  user_id             BigInt                 @id @default(autoincrement())
-  company_id          BigInt?
-  role_id             BigInt?
-  country_id          BigInt?
-  email               String                 @unique(map: "email") @db.VarChar(255)
-  is_email_verified   user_is_email_verified @default(no)
-  password            String?                @db.VarChar(255)
-  otp_expiry_time     DateTime               @default(now()) @db.Timestamp(0)
-  first_name          String?                @db.VarChar(50)
-  last_name           String?                @db.VarChar(50)
-  phone               String?                @db.VarChar(20)
-  zip_code            String?                @db.VarChar(20)
-  address1            String?                @db.VarChar(200)
-  address2            String?                @db.VarChar(200)
-  media_url           String?                @db.VarChar(200)
-  created_at          DateTime?              @default(now()) @db.Timestamp(0)
-  updated_at          DateTime?              @default(now()) @db.Timestamp(0)
-  status              user_status            @default(active)
-  audit_logs          audit_logs[]
-  document            document[]
-  investor_portfolios investor_portfolios[]
-  kyc_details         kyc_details[]
-  payments            payments[]
-  session             session[]
-  trader_portfolios   trader_portfolios[]
-  company             company?               @relation(fields: [company_id], references: [company_id], onDelete: Restrict, onUpdate: Restrict, map: "user_ibfk_1")
-  country             country?               @relation(fields: [country_id], references: [country_id], onDelete: Restrict, onUpdate: Restrict, map: "user_ibfk_2")
-  role                role?                  @relation(fields: [role_id], references: [role_id], onDelete: Restrict, onUpdate: Restrict, map: "user_ibfk_3")
+  user_id                BigInt                 @id @default(autoincrement())
+  company_id             BigInt?
+  role_id                BigInt?
+  country_id             BigInt?
+  email                  String                 @unique(map: "email") @db.VarChar(255)
+  is_email_verified      user_is_email_verified @default(no)
+  password               String?                @db.VarChar(255)
+  otp_expiry_time        DateTime               @default(now()) @db.Timestamp(0)
+  first_name             String?                @db.VarChar(50)
+  last_name              String?                @db.VarChar(50)
+  phone                  String?                @db.VarChar(20)
+  zip_code               String?                @db.VarChar(20)
+  address1               String?                @db.VarChar(200)
+  address2               String?                @db.VarChar(200)
+  media_url              String?                @db.VarChar(200)
+  created_at             DateTime?              @default(now()) @db.Timestamp(0)
+  updated_at             DateTime?              @default(now()) @db.Timestamp(0)
+  status                 user_status            @default(active)
+  profile_filling        user_profile_filling   @default(no)
+  kyc_filling            user_kyc_filling       @default(no)
+  kyc_document_title     String?                @db.VarChar(100)
+  kyc_document_media_url String?                @db.VarChar(500)
+  kyc_video_media_url    String?                @db.VarChar(500)
+  exchange_verify        user_exchange_verify   @default(no)
+  assigned_user          assigned_user[]
+  audit_logs             audit_logs[]
+  document               document[]
+  investor_portfolios    investor_portfolios[]
+  kyc_details            kyc_details[]
+  payments               payments[]
+  session                session[]
+  trader_portfolios      trader_portfolios[]
+  company                company?               @relation(fields: [company_id], references: [company_id], onDelete: Restrict, onUpdate: Restrict, map: "user_ibfk_1")
+  country                country?               @relation(fields: [country_id], references: [country_id], onDelete: Restrict, onUpdate: Restrict, map: "user_ibfk_2")
+  role                   role?                  @relation(fields: [role_id], references: [role_id], onDelete: Restrict, onUpdate: Restrict, map: "user_ibfk_3")
 
   @@index([company_id], map: "company_id")
   @@index([country_id], map: "country_id")
@@ -318,6 +337,7 @@ model company_user {
   created_at        DateTime?                      @default(now()) @db.Timestamp(0)
   updated_at        DateTime?                      @default(now()) @db.Timestamp(0)
   status            company_user_status            @default(active)
+  assigned_user     assigned_user[]
   company_session   company_session[]
   company           company?                       @relation(fields: [company_id], references: [company_id], onDelete: Cascade, onUpdate: Restrict, map: "company_user_ibfk_1")
   country           country?                       @relation(fields: [country_id], references: [country_id], onDelete: Restrict, onUpdate: Restrict, map: "company_user_ibfk_2")
@@ -337,8 +357,33 @@ model assigned_user {
   created_at       DateTime              @default(now()) @db.Timestamp(0)
   updated_at       DateTime              @default(now()) @db.Timestamp(0)
   status           assigned_user_status? @default(active)
+  company          company?              @relation(fields: [company_id], references: [company_id], onDelete: Cascade, onUpdate: Restrict, map: "assigned_user_ibfk_1")
+  company_user     company_user?         @relation(fields: [company_user_id], references: [company_user_id], onDelete: Restrict, onUpdate: Restrict, map: "assigned_user_ibfk_2")
+  user             user?                 @relation(fields: [user_id], references: [user_id], onDelete: Restrict, onUpdate: Restrict, map: "assigned_user_ibfk_3")
 
   @@index([company_id], map: "company_id")
+  @@index([company_user_id], map: "company_user_id")
+  @@index([user_id], map: "user_id")
+}
+
+model investor_trader_packages {
+  investor_trader_packages_id BigInt                         @id @default(autoincrement())
+  company_id                  BigInt?
+  role_id                     BigInt?
+  name                        String                         @db.VarChar(50)
+  min_amount                  Decimal                        @db.Decimal(18, 2)
+  max_amount                  Decimal                        @db.Decimal(18, 2)
+  daily_roi                   Decimal                        @db.Decimal(5, 4)
+  period_days                 Int
+  waiting_period_days         Int?                           @default(4)
+  type                        investor_trader_packages_type?
+  created_at                  DateTime?                      @default(now()) @db.DateTime(0)
+  updated_at                  DateTime?                      @default(now()) @db.DateTime(0)
+  company                     company?                       @relation(fields: [company_id], references: [company_id], onDelete: Cascade, onUpdate: Restrict, map: "investor_trader_packages_ibfk_1")
+  role                        role?                          @relation(fields: [role_id], references: [role_id], onDelete: Restrict, onUpdate: Restrict, map: "investor_trader_packages_ibfk_2")
+
+  @@index([company_id], map: "company_id")
+  @@index([role_id], map: "role_id")
 }
 
 enum kyc_documents_document_type {
@@ -437,4 +482,24 @@ enum company_user_status {
 enum assigned_user_status {
   active
   inactive
+}
+
+enum investor_trader_packages_type {
+  investor
+  trader
+}
+
+enum user_profile_filling {
+  yes
+  no
+}
+
+enum user_kyc_filling {
+  yes
+  no
+}
+
+enum user_exchange_verify {
+  yes
+  no
 }

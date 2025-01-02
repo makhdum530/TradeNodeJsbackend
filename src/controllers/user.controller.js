@@ -24,7 +24,7 @@ import { FORBIDDEN } from '../utils/constant.util.js';
 //   return true;
 // }
 
-export const sendEmailVarificationLink = async (req, res, next) => {
+export const register = async (req, res, next) => {
 	try {
 		const { company_id } = req;
 		const { email, password } = req.body;
@@ -43,6 +43,12 @@ export const sendEmailVarificationLink = async (req, res, next) => {
 			if (existUser) {
 				user_id = existUser?.user_id;
 
+				if (existUser && existUser?.is_email_verified == 'yes')
+					return handleError({
+						res,
+						message: 'verified user exist with same email',
+					});
+
 				//UPDATE OTP-EXPIRY-MIN
 				await tx.user.update({
 					where: {
@@ -53,12 +59,6 @@ export const sendEmailVarificationLink = async (req, res, next) => {
 						otp_expiry_time: new Date(),
 					},
 				});
-
-				if (existUser && existUser?.is_email_verified == 'yes')
-					return handleError({
-						res,
-						message: 'verified user exist with same email',
-					});
 			}
 
 			if (!existUser) {
@@ -241,6 +241,13 @@ export const getAll = async (req, res, next) => {
 		const result = await prisma.user.findMany({
 			where,
 			select: {
+				profile_filling: true,
+				kyc_filling: true,
+				kyc_document_title: true,
+				kyc_document_media_url: true,
+				kyc_video_media_url: true,
+				exchange_verify: true,
+				user_id: true,
 				first_name: true,
 				last_name: true,
 				email: true,
@@ -264,56 +271,61 @@ export const getAll = async (req, res, next) => {
 			take,
 			orderBy,
 		});
+
+		const encryptedResult = result?.map((item) => ({
+			...item,
+			user_id: encrypt(item?.user_id),
+		}));
 		const count = await prisma.user.count({ where });
-		return handleSuccess(res, result, count);
+		return handleSuccess(res, encryptedResult, count);
 	} catch (error) {
 		next(error);
 	}
 };
 
 //CREATE
-export const create = async (req, res, next) => {
-	try {
-		const { company_id, login_user_id } = req;
-		const { first_name, last_name, email, phone, address1, address2, zip_code, country_id, role_id } = req.body;
+// export const create = async (req, res, next) => {
+// 	try {
+// 		const { company_id, login_user_id } = req;
+// 		const { first_name, last_name, email, phone, address1, address2, zip_code, country_id, role_id } = req.body;
 
-		fvString(req, 'first_name');
-		last_name && fvString(req, 'last_name');
-		fvEmail(req, 'email');
-		fvNumber(req, 'phone');
-		fvString(req, 'address1');
-		address2 && fvString(req, 'address2');
-		fvString(req, 'zip_code');
-		fvNumber(req, 'country_id');
-		fvNumber(req, 'role_id');
+// 		fvString(req, 'first_name');
+// 		last_name && fvString(req, 'last_name');
+// 		fvEmail(req, 'email');
+// 		fvNumber(req, 'phone');
+// 		fvString(req, 'address1');
+// 		address2 && fvString(req, 'address2');
+// 		fvString(req, 'zip_code');
+// 		fvNumber(req, 'country_id');
+// 		fvNumber(req, 'role_id');
 
-		const existData = await prisma.user.findFirst({
-			where: {
-				company_id,
-				email,
-			},
-		});
+// 		const existData = await prisma.user.findFirst({
+// 			where: {
+// 				company_id,
+// 				email,
+// 			},
+// 		});
 
-    if(existData) handleError({res,message:"Email already taken"})
-		const result = await prisma.user.create({
-			data: {
-				company_id,
-				role_id,
-				country_id,
-				first_name,
-				last_name,
-				email,
-				phone,
-				address1,
-				address2,
-				zip_code,
-			},
-		});
-		return handleCreate(res, result);
-	} catch (error) {
-		next(error);
-	}
-};
+//     if(existData) handleError({res,message:"Email already taken"})
+// 		const result = await prisma.user.create({
+// 			data: {
+// 				company_id,
+// 				role_id,
+// 				country_id,
+// 				first_name,
+// 				last_name,
+// 				email,
+// 				phone,
+// 				address1,
+// 				address2,
+// 				zip_code,
+// 			},
+// 		});
+// 		return handleCreate(res, result);
+// 	} catch (error) {
+// 		next(error);
+// 	}
+// };
 
 //UPDATE
 export const update = async (req, res, next) => {
@@ -354,9 +366,86 @@ export const update = async (req, res, next) => {
 				address1,
 				address2,
 				zip_code,
+				profile_filling: 'yes',
 			},
 		});
 		return handleUpdate(res, result);
+	} catch (error) {
+		next(error);
+	}
+};
+
+async function getUserDatailsById({ where }) {
+	return await prisma.user.findFirst({
+		where,
+		select: {
+			profile_filling: true,
+			kyc_filling: true,
+			kyc_document_title: true,
+			kyc_document_media_url: true,
+			kyc_video_media_url: true,
+			exchange_verify: true,
+			first_name: true,
+			last_name: true,
+			email: true,
+			phone: true,
+			address1: true,
+			address2: true,
+			zip_code: true,
+			country: {
+				select: {
+					name: true,
+				},
+			},
+			role: {
+				select: {
+					role_id: true,
+					title: true,
+				},
+			},
+		},
+	});
+}
+
+//GET BY ID
+export const getByIdCompanyUser = async (req, res, next) => {
+	try {
+		const { company_id, login_user_id, role_id } = req;
+		const { id } = req.params;
+
+		fvString(req, 'id');
+		const decrypted_user_id = decrypt(id);
+
+		const where = {
+			company_id,
+			user_id: decrypted_user_id,
+		};
+
+		const result = await getUserDatailsById({ where });
+
+		return handleSuccess(res, result);
+	} catch (error) {
+		next(error);
+	}
+};
+
+//GET BY ID CUSTOMER/USER
+export const getByIdUser = async (req, res, next) => {
+	try {
+		const { company_id, login_user_id, role_id } = req;
+		const { id } = req.params;
+
+		fvString(req, 'id');
+		const decrypted_user_id = decrypt(id);
+
+		const where = {
+			company_id,
+			user_id: decrypted_user_id,
+		};
+
+		const result = await getUserDatailsById({ where });
+
+		return handleSuccess(res, result);
 	} catch (error) {
 		next(error);
 	}
