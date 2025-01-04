@@ -23,12 +23,13 @@ export const permissionSuperAdmin = () => {
 	};
 };
 
-export const permissionAdmin = () => {
+export const permissionAdminAndSA = () => {
 	return (req, res, next) => {
 		try {
 			const { role_id } = req;
 
-			if (role_id !== 2) {
+			//CAN ONLY OWNER=1 || ADMIN=2
+			if (role_id !== 1 || role_id !== 2) {
 				return handleError({
 					res,
 					message: 'Access denied. Only Super Admins can perform this action.',

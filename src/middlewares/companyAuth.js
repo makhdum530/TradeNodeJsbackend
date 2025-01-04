@@ -1,6 +1,6 @@
 import { prisma } from "../config/db.js";
-import { SESSION_EXPIRED, SUCCESS } from "../utils/constant.util.js";
-import { decrypt, encrypt } from "../utils/crypto.util.js";
+import { SESSION_EXPIRED } from "../utils/constant.util.js";
+import { decrypt } from "../utils/crypto.util.js";
 import { fvEnum, fvString } from "../utils/formValidator.util.js";
 import { handleError } from "../utils/handleResponse.util.js";
 
@@ -95,7 +95,6 @@ export const validateLoginMiddlewareCompanyAuth = async (req, res, next) => {
         return_status_code: SESSION_EXPIRED,
       });
     }
-
     next();
   } catch (error) {
     next(error);

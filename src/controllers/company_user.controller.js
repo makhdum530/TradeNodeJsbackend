@@ -131,7 +131,7 @@ export const verifyEmail = async (req, res, next) => {
 		const currentTime = moment();
 
 		if (currentTime.isAfter(expiryTime)) {
-			throw new Error('OTP has expired. Please request a new OTP.');
+			return handleError({ res, message: 'OTP has expired. Please request a new OTP.' });
 		}
 
 		const result = await prisma.company_user.update({

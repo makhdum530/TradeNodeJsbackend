@@ -164,7 +164,7 @@ export const verifyEmail = async (req, res, next) => {
 		const currentTime = moment();
 
 		if (currentTime.isAfter(expiryTime)) {
-			throw new Error('OTP has expired. Please request a new OTP.');
+			return handleError({ res, message: 'OTP has expired. Please request a new OTP.' });
 		}
 
 		const result = await prisma.user.update({
@@ -253,7 +253,7 @@ export const login = async (req, res, next) => {
 
 export const getAll = async (req, res, next) => {
 	try {
-		const { company_id } = req;
+		const { company_id, login_user_id } = req;
 		const { order_by, order_by_column, search_keyword } = req.query;
 
 		// Parse pagination
@@ -262,6 +262,7 @@ export const getAll = async (req, res, next) => {
 
 		const where = {
 			company_id,
+			user_id: { not: login_user_id },
 		};
 
 		// Add search keyword filter if provided
