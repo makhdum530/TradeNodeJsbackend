@@ -240,7 +240,6 @@ export const getAll = async (req, res, next) => {
 
 		// Define sorting
 		const orderBy = order_by_column && order_by ? { [order_by_column]: order_by.toLowerCase() } : { created_at: 'asc' };
-
 		const result = await prisma.company_user.findMany({
 			where,
 			select: {

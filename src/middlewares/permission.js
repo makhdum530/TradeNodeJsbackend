@@ -27,16 +27,29 @@ export const permissionAdminAndOwner = () => {
 	return (req, res, next) => {
 		try {
 			const { role_id } = req;
+			const { id } = req.params;
 
-			//CAN ONLY OWNER=1 || ADMIN=2
-			if (role_id !== 1 || role_id !== 2) {
-				return handleError({
-					res,
-					message: 'Access denied. Only Super Admins can perform this action.',
-					status_code: FORBIDDEN,
-					return_status_code: FORBIDDEN,
-				});
+			const allowedRoles = [1, 2];
+			if (!allowedRoles.includes(role_id)) {
+				if (parseInt(id) !== parseInt(login_user_id)) {
+					return handleError({
+						res,
+						message: 'Access denied. Only Super Admins can perform this action.',
+						status_code: FORBIDDEN,
+						return_status_code: FORBIDDEN,
+					});
+				}
 			}
+
+			// //CAN ONLY OWNER=1 || ADMIN=2
+			// if (role_id !== 1 || role_id !== 2) {
+			// 	return handleError({
+			// 		res,
+			// 		message: 'Access denied. Only Super Admins can perform this action.',
+			// 		status_code: FORBIDDEN,
+			// 		return_status_code: FORBIDDEN,
+			// 	});
+			// }
 
 			// If role_id is 1, proceed to the next middleware or route handler
 			next();
