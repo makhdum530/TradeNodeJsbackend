@@ -222,7 +222,7 @@ export const login = async (req, res, next) => {
 export const getAll = async (req, res, next) => {
 	try {
 		const { company_id } = req;
-		const { order_by, order_by_column, search_keyword } = req.query;
+		const { order_by, order_by_column, search_keyword, role_id } = req.query;
 
 		// Parse pagination
 		const skip = req.query.skip ? parseInt(req.query.skip, 10) : undefined;
@@ -230,6 +230,7 @@ export const getAll = async (req, res, next) => {
 
 		const where = {
 			company_id,
+			...(role_id && { role_id }),
 		};
 
 		// Add search keyword filter if provided

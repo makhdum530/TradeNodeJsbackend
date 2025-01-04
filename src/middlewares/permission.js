@@ -23,7 +23,7 @@ export const permissionSuperAdmin = () => {
 	};
 };
 
-export const permissionAdminAndSA = () => {
+export const permissionAdminAndOwner = () => {
 	return (req, res, next) => {
 		try {
 			const { role_id } = req;
